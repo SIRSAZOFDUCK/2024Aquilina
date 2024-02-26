@@ -10,21 +10,12 @@ rm(list=ls()) # Clear environment
 path.project <- "C:/Users/sirsa/OneDrive/Documents/2024Aquilina"
 
 # Create outputs folder
-dir.create(file.path(getwd(), 'outputs'), recursive = TRUE)
-
-### Select outcome
-
-## Use the following selections
-
-# Elective caesarian sections
-
-i = 80
-j = "Elective caesarian section"
+dir.create(file.path(getwd(), 'outputs'), recursive = FALSE, showWarnings = FALSE)
 
 
 ### Load packages -----
 
-list.of.packages <- c("data.table", "dplyr", "janitor", "reshape2", "readxl", "sandwich", "msm", "plyr", "ggplot2", "Cairo")
+list.of.packages <- c("data.table", "dplyr", "janitor", "reshape2", "readxl", "sandwich", "msm", "plyr", "ggplot2", "Cairo", "foreach")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -38,7 +29,36 @@ library(msm)
 library(plyr)
 library(ggplot2)
 library(Cairo)
+library(foreach)
+library(doParallel)
 
+### START LOOP -----
+
+# Define columns in dataset with outcomes of interest, and what these columns represent
+
+# Column positions
+col.pos = c(36, 
+      37
+      )
+
+# Column names
+col.name = c("Elective caesarian",
+      "Emergency caesarian"
+)
+
+# Create empty lists for plots
+figure1a = list()
+figure1b = list()
+figure1c = list()
+
+# Start loop
+for(k in 1:length(col.pos)) {
+ 
+# Set parameters
+
+i = col.pos[k]
+j = col.name[k]
+  
 ### Load data -----
 
 # From https://digital.nhs.uk/data-and-information/publications/statistical/nhs-maternity-statistics
@@ -116,7 +136,7 @@ data.imd <- data %>%
 
 data.outcome.specific <- data.outcomes %>%
   # Select required columns
-  dplyr::select(1,2,36,i) %>%
+  dplyr::select(1,2,i,80) %>%
   # Rename columns
   dplyr::rename(org_code = 1, org_name = 2, outcome = 3, total = 4) %>%
   # Ensure only first three letters of organisation code are kept
@@ -232,15 +252,7 @@ if(max(df$outcome.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 i
 
 # Plot bar chart of outcome rate by % deprivation quintile (Q5 has the most people in the most deprived quintile)
 
-Cairo(file=paste0("outputs/Figure 1A. ", j, " by deprivation quintile.png"), 
-      type="png",
-      units="in", 
-      width=5, 
-      height=4, 
-      pointsize=6, 
-      dpi=1200)
-
-ggplot(df, aes(x=prop.deprived.quintile, y=outcome.rate)) + 
+figure1a[[j]] <- ggplot(df, aes(x=prop.deprived.quintile, y=outcome.rate)) + 
   geom_bar(position=position_dodge(), stat="identity",colour="black", size=0.4, fill=c("white","#9ecae1","#4292c6","#2171b5","#08306b")) +
   geom_errorbar(aes(ymin=outcome.rate-ci, ymax=outcome.rate+ci),
                 width=.3, size=0.4,                   # Width of the error bars, width of actual bar lines
@@ -253,7 +265,8 @@ ggplot(df, aes(x=prop.deprived.quintile, y=outcome.rate)) +
                      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
   theme(plot.title = element_text(hjust = 0.5, size = 12), axis.text = element_text(size = 10), axis.title = element_text(size= 10))
 
-dev.off()
+# Save
+ggsave(figure1a[[j]], file=paste0("outputs/Figure 1A. ", j, " rate by deprivation quintile.png"), width = 5, height = 4, units = "in", dpi=1200)
 
 ## Ethnicity plot
 
@@ -288,15 +301,7 @@ if(max(df$outcome.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 i
 
 # Plot bar chart of outcome rate by % deprivation quintile (Q5 has the most people in the most deprived quintile)
 
-Cairo(file=paste0("outputs/Figure 1B. ", j, "rate by white ethnicity quintile.png"), 
-      type="png",
-      units="in", 
-      width=5, 
-      height=4, 
-      pointsize=6, 
-      dpi=1200)
-
-ggplot(df, aes(x=prop.white.quintile, y=outcome.rate)) + 
+figure1b[[j]] <-ggplot(df, aes(x=prop.white.quintile, y=outcome.rate)) + 
   geom_bar(position=position_dodge(), stat="identity",colour="black", size=0.4, fill=c("white","#9ecae1","#4292c6","#2171b5","#08306b")) +
   geom_errorbar(aes(ymin=outcome.rate-ci, ymax=outcome.rate+ci),
                 width=.3, size=0.4,                   # Width of the error bars, width of actual bar lines
@@ -309,7 +314,8 @@ ggplot(df, aes(x=prop.white.quintile, y=outcome.rate)) +
                      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
   theme(plot.title = element_text(hjust = 0.5, size = 12), axis.text = element_text(size = 10), axis.title = element_text(size= 10))
 
-dev.off()
+# Save
+ggsave(figure1b[[j]], file=paste0("outputs/Figure 1B. ", j, " rate by white ethnicity quintile.png"), width = 5, height = 4, units = "in", dpi=1200)
 
 ## Age plot
 
@@ -344,15 +350,7 @@ if(max(df$outcome.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 i
 
 # Plot bar chart of outcome rate by % deprivation quintile (Q5 has the most people in the most deprived quintile)
 
-Cairo(file=paste0("outputs/Figure 1C. ", j, " by over-35yr quintile.png"), 
-      type="png",
-      units="in", 
-      width=5, 
-      height=4, 
-      pointsize=6, 
-      dpi=1200)
-
-ggplot(df, aes(x=prop.over35.quintile, y=outcome.rate)) + 
+figure1c[[j]] <- ggplot(df, aes(x=prop.over35.quintile, y=outcome.rate)) + 
   geom_bar(position=position_dodge(), stat="identity",colour="black", size=0.4, fill=c("white","#9ecae1","#4292c6","#2171b5","#08306b")) +
   geom_errorbar(aes(ymin=outcome.rate-ci, ymax=outcome.rate+ci),
                 width=.3, size=0.4,                   # Width of the error bars, width of actual bar lines
@@ -365,7 +363,10 @@ ggplot(df, aes(x=prop.over35.quintile, y=outcome.rate)) +
                      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
   theme(plot.title = element_text(hjust = 0.5, size = 12), axis.text = element_text(size = 10), axis.title = element_text(size= 10))
 
-dev.off()
+# Save
+ggsave(figure1c[[j]], file=paste0("outputs/Figure 1C. ", j, " rate by over-35yr quintile.png"), width = 5, height = 4, units = "in", dpi=1200)
+
+
 
 
 ### Analysis -----
@@ -514,7 +515,9 @@ row.names(table3)[15] <- "% Over-35yr Quintile 5"
 write.csv(table3,paste0("outputs/Table 3. ", j, " - multivariate regression.csv"),row.names = T)
 
 
+# End loop
 
+}
 
 
 
