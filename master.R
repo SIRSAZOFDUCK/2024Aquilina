@@ -6,7 +6,20 @@
 
 rm(list=ls()) # Clear environment
 
+# Specify project folder
 path.project <- "C:/Users/sirsa/OneDrive/Documents/2024Aquilina"
+
+# Create outputs folder
+dir.create(file.path(getwd(), 'outputs'), recursive = TRUE)
+
+### Select outcome
+
+## Use the following selections
+
+# Elective caesarian sections
+
+i = 80
+j = "Elective caesarian section"
 
 
 ### Load packages -----
@@ -99,21 +112,21 @@ data.imd <- data %>%
   # Remove unrequired columns
   select(-c(total, x01_most_deprived, x02, x03, x04, x05, x06, x07, x08, x09, x10_least_deprived, missing_value_value_outside_reporting_parameters, pseudo_postcode_recorded_includes_no_fixed_abode_or_resident_overseas, resident_elsewhere_in_uk_channel_islands_or_isle_of_man))
 
-# Outcome: elective Caesarian
+# Outcome data
 
-data.outcome.elect.caesarian <- data.outcomes %>%
+data.outcome.specific <- data.outcomes %>%
   # Select required columns
-  select(1,2,36, 80) %>%
+  dplyr::select(1,2,36,i) %>%
   # Rename columns
-  rename(org_code = 1, org_name = 2, elect.caesarian = 3, total = 4) %>%
+  dplyr::rename(org_code = 1, org_name = 2, outcome = 3, total = 4) %>%
   # Ensure only first three letters of organisation code are kept
   mutate(org_code2 = substr(org_code, start = 1, stop = 3)) %>%
   # Replace three-letter org code columns with the original
-  select(-c(org_code, org_name)) %>%
-  rename(org_code = org_code2) %>%
+  dplyr::select(-c(org_code, org_name)) %>%
+  dplyr::rename(org_code = org_code2) %>%
   # Ensure data is numeric
   mutate(total = as.numeric(total)) %>%
-  mutate(elect.caesarian = as.numeric(elect.caesarian))
+  mutate(outcome = as.numeric(outcome))
   
 
 
@@ -125,7 +138,7 @@ data.all <- data.age %>%
   # Join ethnicity data
   left_join(data.ethnicity, by = c("org_code", "org_name")) %>%
   # Join outcome data
-  left_join(data.outcome.elect.caesarian, by = c("org_code")) %>%
+  left_join(data.outcome.specific, by = c("org_code")) %>%
   # Remove rows with NA data
   filter(!is.na(total)) %>%
   # Remove rows with small data (*)
@@ -139,7 +152,7 @@ data.all <- data.all %>%
   mutate(prop.over35.quintile = ntile(prop.over35, 5)) %>%
   mutate(prop.white.quintile = ntile(prop.white, 5)) %>%
   # Calculate outcome rate per 1000
-  mutate(elect.caesarian.rate = 1000*elect.caesarian/total)
+  mutate(outcome.rate = 1000*outcome/total)
 
 
 # Ensure ntiles are categorical (factors)
@@ -189,36 +202,37 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
 ## Deprivation plot
 
 # Calculate 95% confidence intervals for outcome rate by % deprivation quintile and save
-df <- summarySE(data.all,measurevar = "elect.caesarian.rate",groupvars = "prop.deprived.quintile")
-df$lower.ci <- df$elect.caesarian.rate-df$ci #calculate lower and upper CIs
-df$upper.ci <- df$elect.caesarian.rate+df$ci
+df <- summarySE(data.all,measurevar = "outcome.rate",groupvars = "prop.deprived.quintile")
+df$lower.ci <- df$outcome.rate-df$ci #calculate lower and upper CIs
+df$upper.ci <- df$outcome.rate+df$ci
 dfA<-df[,c(1,2,3,7,8)] #subset data to save
 names(dfA)[1] <- "% Most deprived quintile" #rename columns
 names(dfA)[2] <- "n"
-names(dfA)[3] <- "Elective Caesarians per 1000 births"
+names(dfA)[3] <- "Outcomes per 1000 births"
 names(dfA)[4] <- "Lower 95% CI"
 names(dfA)[5] <- "Upper 95% CI"
-dfA$`Elective Caesarians per 1000 births`<-round_any(dfA$`Elective Caesarians per 1000 births`, 0.01)
+dfA$`Outcomes per 1000 births`<-plyr::round_any(as.numeric(dfA$`Outcomes per 1000 births`), 0.01)
 dfA$`Lower 95% CI`<-round_any(dfA$`Lower 95% CI`, 0.01)
 dfA$`Upper 95% CI`<-round_any(dfA$`Upper 95% CI`, 0.01)
-write.csv(dfA,"Table 1. Outcome rate by deprivation quintile.csv",row.names = F)
+names(dfA)[3] <- paste0(j, " rate per 1000 births")
+write.csv(dfA,paste0("outputs/Table 1A. ",j," by deprivation quintile.csv"),row.names = F)
 
 # Set axis limits for bar chart
-if(max(df$elect.caesarian.rate+df$ci)<150){   # set upper y-axis limit to nearest 10 if highest number is <150
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 10, f = ceiling)
+if(max(df$outcome.rate+df$ci)<150){   # set upper y-axis limit to nearest 10 if highest number is <150
+  maxy=round_any(max(df$outcome.rate+df$ci), 10, f = ceiling)
 }
 
-if(max(df$elect.caesarian.rate+df$ci)>=150 && max(df$elect.caesarian.rate+df$ci)<=1500){   # set upper y-axis limit to nearest 100 if highest number is <1500
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 100, f = ceiling)
+if(max(df$outcome.rate+df$ci)>=150 && max(df$outcome.rate+df$ci)<=1500){   # set upper y-axis limit to nearest 100 if highest number is <1500
+  maxy=round_any(max(df$outcome.rate+df$ci), 100, f = ceiling)
 }
 
-if(max(df$elect.caesarian.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 if highest number is >1500
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 1000, f = ceiling)
+if(max(df$outcome.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 if highest number is >1500
+  maxy=round_any(max(df$outcome.rate+df$ci), 1000, f = ceiling)
 }
 
 # Plot bar chart of outcome rate by % deprivation quintile (Q5 has the most people in the most deprived quintile)
 
-Cairo(file="Figure 1. Outcome rate by deprivation quintile.png", 
+Cairo(file=paste0("outputs/Figure 1A. ", j, " by deprivation quintile.png"), 
       type="png",
       units="in", 
       width=5, 
@@ -226,15 +240,15 @@ Cairo(file="Figure 1. Outcome rate by deprivation quintile.png",
       pointsize=6, 
       dpi=1200)
 
-ggplot(df, aes(x=prop.deprived.quintile, y=elect.caesarian.rate)) + 
+ggplot(df, aes(x=prop.deprived.quintile, y=outcome.rate)) + 
   geom_bar(position=position_dodge(), stat="identity",colour="black", size=0.4, fill=c("white","#9ecae1","#4292c6","#2171b5","#08306b")) +
-  geom_errorbar(aes(ymin=elect.caesarian.rate-ci, ymax=elect.caesarian.rate+ci),
+  geom_errorbar(aes(ymin=outcome.rate-ci, ymax=outcome.rate+ci),
                 width=.3, size=0.4,                   # Width of the error bars, width of actual bar lines
                 position=position_dodge())+
-  xlab("\n% Most deprived quntile") + ylab("OUtcome rate\nper 1000 births\n") +
+  xlab("\n% Most deprived quintile") + ylab(paste0(j, " rate\nper 1000 births\n")) +
   ylim(0,maxy)+
   scale_x_discrete(breaks = unique(df$prop.deprived.quintile))+ 
-  ggtitle("Outcome rate by most deprived quintile\n")+
+  ggtitle(paste0(j, " rate\nby deprivation quintile\n"))+
   theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
   theme(plot.title = element_text(hjust = 0.5, size = 12), axis.text = element_text(size = 10), axis.title = element_text(size= 10))
@@ -244,36 +258,37 @@ dev.off()
 ## Ethnicity plot
 
 # Calculate 95% confidence intervals for outcome rate by % deprivation quintile and save
-df <- summarySE(data.all,measurevar = "elect.caesarian.rate",groupvars = "prop.white.quintile")
-df$lower.ci <- df$elect.caesarian.rate-df$ci #calculate lower and upper CIs
-df$upper.ci <- df$elect.caesarian.rate+df$ci
+df <- summarySE(data.all,measurevar = "outcome.rate",groupvars = "prop.white.quintile")
+df$lower.ci <- df$outcome.rate-df$ci #calculate lower and upper CIs
+df$upper.ci <- df$outcome.rate+df$ci
 dfA<-df[,c(1,2,3,7,8)] #subset data to save
 names(dfA)[1] <- "% White quintile" #rename columns
 names(dfA)[2] <- "n"
-names(dfA)[3] <- "Elective Caesarians per 1000 births"
+names(dfA)[3] <- "Outcomes per 1000 births"
 names(dfA)[4] <- "Lower 95% CI"
 names(dfA)[5] <- "Upper 95% CI"
-dfA$`Elective Caesarians per 1000 births`<-round_any(dfA$`Elective Caesarians per 1000 births`, 0.01)
+dfA$`Outcomes per 1000 births`<-round_any(dfA$`Outcomes per 1000 births`, 0.01)
 dfA$`Lower 95% CI`<-round_any(dfA$`Lower 95% CI`, 0.01)
 dfA$`Upper 95% CI`<-round_any(dfA$`Upper 95% CI`, 0.01)
-write.csv(dfA,"Table 1. Outcome rate by white ethnicity quintile.csv",row.names = F)
+names(dfA)[3] <- paste0(j, " rate per 1000 births")
+write.csv(dfA,paste0("outputs/Table 1B. ",j," by white ethnicity quintile.csv"),row.names = F)
 
 # Set axis limits for bar chart
-if(max(df$elect.caesarian.rate+df$ci)<150){   # set upper y-axis limit to nearest 10 if highest number is <150
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 10, f = ceiling)
+if(max(df$outcome.rate+df$ci)<150){   # set upper y-axis limit to nearest 10 if highest number is <150
+  maxy=round_any(max(df$outcome.rate+df$ci), 10, f = ceiling)
 }
 
-if(max(df$elect.caesarian.rate+df$ci)>=150 && max(df$elect.caesarian.rate+df$ci)<=1500){   # set upper y-axis limit to nearest 100 if highest number is <1500
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 100, f = ceiling)
+if(max(df$outcome.rate+df$ci)>=150 && max(df$outcome.rate+df$ci)<=1500){   # set upper y-axis limit to nearest 100 if highest number is <1500
+  maxy=round_any(max(df$outcome.rate+df$ci), 100, f = ceiling)
 }
 
-if(max(df$elect.caesarian.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 if highest number is >1500
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 1000, f = ceiling)
+if(max(df$outcome.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 if highest number is >1500
+  maxy=round_any(max(df$outcome.rate+df$ci), 1000, f = ceiling)
 }
 
 # Plot bar chart of outcome rate by % deprivation quintile (Q5 has the most people in the most deprived quintile)
 
-Cairo(file="Figure 2. Outcome rate by white ethnicity quintile.png", 
+Cairo(file=paste0("outputs/Figure 1B. ", j, "rate by white ethnicity quintile.png"), 
       type="png",
       units="in", 
       width=5, 
@@ -281,15 +296,15 @@ Cairo(file="Figure 2. Outcome rate by white ethnicity quintile.png",
       pointsize=6, 
       dpi=1200)
 
-ggplot(df, aes(x=prop.white.quintile, y=elect.caesarian.rate)) + 
+ggplot(df, aes(x=prop.white.quintile, y=outcome.rate)) + 
   geom_bar(position=position_dodge(), stat="identity",colour="black", size=0.4, fill=c("white","#9ecae1","#4292c6","#2171b5","#08306b")) +
-  geom_errorbar(aes(ymin=elect.caesarian.rate-ci, ymax=elect.caesarian.rate+ci),
+  geom_errorbar(aes(ymin=outcome.rate-ci, ymax=outcome.rate+ci),
                 width=.3, size=0.4,                   # Width of the error bars, width of actual bar lines
                 position=position_dodge())+
-  xlab("\n% White ethnicity quntile") + ylab("OUtcome rate\nper 1000 births\n") +
+  xlab("\n% White ethnicity quntile") + ylab(paste0(j, " rate\nper 1000 births\n")) +
   ylim(0,maxy)+
   scale_x_discrete(breaks = unique(df$prop.white.quintile))+ 
-  ggtitle("Outcome rate by White ethnicity quintile\n")+
+  ggtitle(paste0(j, " rate\nby White ethnicity quintile\n"))+
   theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
   theme(plot.title = element_text(hjust = 0.5, size = 12), axis.text = element_text(size = 10), axis.title = element_text(size= 10))
@@ -299,36 +314,37 @@ dev.off()
 ## Age plot
 
 # Calculate 95% confidence intervals for outcome rate by % deprivation quintile and save
-df <- summarySE(data.all,measurevar = "elect.caesarian.rate",groupvars = "prop.over35.quintile")
-df$lower.ci <- df$elect.caesarian.rate-df$ci #calculate lower and upper CIs
-df$upper.ci <- df$elect.caesarian.rate+df$ci
+df <- summarySE(data.all,measurevar = "outcome.rate",groupvars = "prop.over35.quintile")
+df$lower.ci <- df$outcome.rate-df$ci #calculate lower and upper CIs
+df$upper.ci <- df$outcome.rate+df$ci
 dfA<-df[,c(1,2,3,7,8)] #subset data to save
 names(dfA)[1] <- "% Over 35 quintile" #rename columns
 names(dfA)[2] <- "n"
-names(dfA)[3] <- "Elective Caesarians per 1000 births"
+names(dfA)[3] <- "Outcomes per 1000 births"
 names(dfA)[4] <- "Lower 95% CI"
 names(dfA)[5] <- "Upper 95% CI"
-dfA$`Elective Caesarians per 1000 births`<-round_any(dfA$`Elective Caesarians per 1000 births`, 0.01)
+dfA$`Outcomes per 1000 births`<-round_any(dfA$`Outcomes per 1000 births`, 0.01)
 dfA$`Lower 95% CI`<-round_any(dfA$`Lower 95% CI`, 0.01)
 dfA$`Upper 95% CI`<-round_any(dfA$`Upper 95% CI`, 0.01)
-write.csv(dfA,"Table 1. Outcome rate by over-35yr quintile.csv",row.names = F)
+names(dfA)[3] <- paste0(j, " rate per 1000 births")
+write.csv(dfA,paste0("outputs/Table 1C. ",j," by over-35yr quintile.csv"),row.names = F)
 
 # Set axis limits for bar chart
-if(max(df$elect.caesarian.rate+df$ci)<150){   # set upper y-axis limit to nearest 10 if highest number is <150
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 10, f = ceiling)
+if(max(df$outcome.rate+df$ci)<150){   # set upper y-axis limit to nearest 10 if highest number is <150
+  maxy=round_any(max(df$outcome.rate+df$ci), 10, f = ceiling)
 }
 
-if(max(df$elect.caesarian.rate+df$ci)>=150 && max(df$elect.caesarian.rate+df$ci)<=1500){   # set upper y-axis limit to nearest 100 if highest number is <1500
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 100, f = ceiling)
+if(max(df$outcome.rate+df$ci)>=150 && max(df$outcome.rate+df$ci)<=1500){   # set upper y-axis limit to nearest 100 if highest number is <1500
+  maxy=round_any(max(df$outcome.rate+df$ci), 100, f = ceiling)
 }
 
-if(max(df$elect.caesarian.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 if highest number is >1500
-  maxy=round_any(max(df$elect.caesarian.rate+df$ci), 1000, f = ceiling)
+if(max(df$outcome.rate+df$ci)>1500){   # set upper y-axis limit to nearest 100 if highest number is >1500
+  maxy=round_any(max(df$outcome.rate+df$ci), 1000, f = ceiling)
 }
 
 # Plot bar chart of outcome rate by % deprivation quintile (Q5 has the most people in the most deprived quintile)
 
-Cairo(file="Figure 3. Outcome rate by over-35yr quintile.png", 
+Cairo(file=paste0("outputs/Figure 1C. ", j, " by over-35yr quintile.png"), 
       type="png",
       units="in", 
       width=5, 
@@ -336,15 +352,15 @@ Cairo(file="Figure 3. Outcome rate by over-35yr quintile.png",
       pointsize=6, 
       dpi=1200)
 
-ggplot(df, aes(x=prop.over35.quintile, y=elect.caesarian.rate)) + 
+ggplot(df, aes(x=prop.over35.quintile, y=outcome.rate)) + 
   geom_bar(position=position_dodge(), stat="identity",colour="black", size=0.4, fill=c("white","#9ecae1","#4292c6","#2171b5","#08306b")) +
-  geom_errorbar(aes(ymin=elect.caesarian.rate-ci, ymax=elect.caesarian.rate+ci),
+  geom_errorbar(aes(ymin=outcome.rate-ci, ymax=outcome.rate+ci),
                 width=.3, size=0.4,                   # Width of the error bars, width of actual bar lines
                 position=position_dodge())+
-  xlab("\n% Over 35 years quntile") + ylab("OUtcome rate\nper 1000 births\n") +
+  xlab("\n% Over 35 years quntile") + ylab(paste0(j, " rate\nper 1000 births\n")) +
   ylim(0,maxy)+
   scale_x_discrete(breaks = unique(df$prop.over35.quintile))+ 
-  ggtitle("Outcome rate by age over 35 years quintile\n")+
+  ggtitle(paste0(j, " rate\nby age over 35 years quintile\n"))+
   theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
                      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
   theme(plot.title = element_text(hjust = 0.5, size = 12), axis.text = element_text(size = 10), axis.title = element_text(size= 10))
@@ -358,7 +374,7 @@ dev.off()
 
 # By % most deprived quintile
 
-summary(m1 <- glm(elect.caesarian.rate ~ prop.deprived.quintile, family="quasipoisson", data=data.all))
+summary(m1 <- glm(outcome.rate ~ prop.deprived.quintile, family="quasipoisson", data=data.all))
 
 # calculate robust standard errors (and related p values) to control for mild violation of the distribution assumption that the variance equals the mean
 cov.m1 <- vcovHC(m1, type="HC0")
@@ -390,7 +406,7 @@ row.names(table2a)[5] <- "Deprivation Quintile 5" #rename row 5
 
 # By % white quintile
 
-summary(m1 <- glm(elect.caesarian.rate ~ prop.white.quintile, family="quasipoisson", data=data.all))
+summary(m1 <- glm(outcome.rate ~ prop.white.quintile, family="quasipoisson", data=data.all))
 
 # calculate robust standard errors (and related p values) to control for mild violation of the distribution assumption that the variance equals the mean
 cov.m1 <- vcovHC(m1, type="HC0")
@@ -421,7 +437,7 @@ row.names(table2b)[5] <- "% White Quintile 5" #rename row 5
 
 # By % over 35yr quintile
 
-summary(m1 <- glm(elect.caesarian.rate ~ prop.over35.quintile, family="quasipoisson", data=data.all))
+summary(m1 <- glm(outcome.rate ~ prop.over35.quintile, family="quasipoisson", data=data.all))
 
 # calculate robust standard errors (and related p values) to control for mild violation of the distribution assumption that the variance equals the mean
 cov.m1 <- vcovHC(m1, type="HC0")
@@ -452,11 +468,11 @@ row.names(table2c)[5] <- "% Over-35yr Quintile 5" #rename row 5
 # save univariate regression results
 
 table2 <- rbind(table2a, table2b, table2c) # Combine results tables
-write.csv(table2,"Table 2. Results of univariate regression.csv",row.names = T)
+write.csv(table2,paste0("outputs/Table 2. ", j, " - univariate regression.csv"),row.names = T)
 
 ## Multivariate
 
-summary(m1 <- glm(elect.caesarian.rate ~ prop.deprived.quintile + prop.white.quintile + prop.over35.quintile, family="quasipoisson", data=data.all))
+summary(m1 <- glm(outcome.rate ~ prop.deprived.quintile + prop.white.quintile + prop.over35.quintile, family="quasipoisson", data=data.all))
 
 cov.m1 <- vcovHC(m1, type="HC0")
 std.err <- sqrt(diag(cov.m1))
@@ -495,7 +511,7 @@ row.names(table3)[15] <- "% Over-35yr Quintile 5"
 
 
 # save multivariate regression results
-write.csv(table3,"Table 3. Results of multivariate regression.csv",row.names = T)
+write.csv(table3,paste0("outputs/Table 3. ", j, " - multivariate regression.csv"),row.names = T)
 
 
 
