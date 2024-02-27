@@ -37,14 +37,13 @@ library(doParallel)
 # Define columns in dataset with outcomes of interest, and what these columns represent
 
 # Column positions
-col.pos = c(36, 
-      37
-      )
+col.pos = c(36, 37, 60)
 
 # Column names
 col.name = c("Elective caesarian",
-      "Emergency caesarian"
-)
+             "Emergency caesarian",
+             "General anaesthetic"
+             )
 
 # Create empty lists for plots
 figure1a = list()
@@ -149,7 +148,6 @@ data.outcome.specific <- data.outcomes %>%
   mutate(outcome = as.numeric(outcome))
   
 
-
 ### Link data -----
 
 data.all <- data.age %>%
@@ -161,6 +159,7 @@ data.all <- data.age %>%
   left_join(data.outcome.specific, by = c("org_code")) %>%
   # Remove rows with NA data
   filter(!is.na(total)) %>%
+  filter(!is.na(outcome)) %>%
   # Remove rows with small data (*)
   filter(total != "*")
 
