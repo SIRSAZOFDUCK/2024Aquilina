@@ -4,7 +4,8 @@
 
 ### Define paths -----
 
-rm(list=ls()) # Clear environment
+# Clear environment
+rm(list=ls()) 
 
 # Specify project folder
 path.project <- "C:/Users/sirsa/OneDrive/Documents/2024Aquilina"
@@ -37,12 +38,18 @@ library(doParallel)
 # Define columns in dataset with outcomes of interest, and what these columns represent
 
 # Column positions
-col.pos = c(36, 37, 60)
+col.pos = c(35, 36, 37, 60, 39, 40, 41, 33, 34)
 
 # Column names
-col.name = c("Elective caesarian",
+col.name = c("Any spontaneous delivery",
+             "Elective caesarian",
              "Emergency caesarian",
-             "General anaesthetic"
+             "General anaesthetic",
+             "Low forceps delivery",
+             "Other forceps delivery",
+             "Ventouse delivery",
+             "Any caesarian delivery",
+             "Any instrumental delivery"
              )
 
 # Create empty lists for plots
