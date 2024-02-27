@@ -16,7 +16,7 @@ dir.create(file.path(getwd(), 'outputs'), recursive = FALSE, showWarnings = FALS
 
 ### Load packages -----
 
-list.of.packages <- c("data.table", "dplyr", "janitor", "reshape2", "readxl", "sandwich", "msm", "plyr", "ggplot2", "Cairo", "foreach")
+list.of.packages <- c("data.table", "dplyr", "janitor", "reshape2", "readxl", "sandwich", "msm", "plyr", "ggplot2")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -29,9 +29,8 @@ library(sandwich)
 library(msm)
 library(plyr)
 library(ggplot2)
-library(Cairo)
-library(foreach)
-library(doParallel)
+
+
 
 ### START LOOP -----
 
