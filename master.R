@@ -71,7 +71,7 @@ for(k in 1:length(col.pos)) {
     clean_names()
   
   data.outcomes <- read_xlsx("hosp-epis-stat-mat-pla-2022-23.xlsx",
-                             sheet = 11,
+                             sheet = 12,
                              skip = 1) %>%
     clean_names()
   
